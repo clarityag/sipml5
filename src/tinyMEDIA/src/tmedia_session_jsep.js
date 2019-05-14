@@ -509,13 +509,26 @@ tmedia_session_jsep01.onCreateSdpError = function (s_error, _This) {
 }
 
 tmedia_session_jsep01.onSetLocalDescriptionSuccess = function (_This) {
-    tsk_utils_log_info("onSetLocalDescriptionSuccess");
-    var This = (tmedia_session_jsep01.mozThis || _This);
-    if (This && This.o_pc) {
-        if ((This.o_pc.iceGatheringState || This.o_pc.iceState) === "complete") {
-            tmedia_session_jsep01.onIceGatheringCompleted(This);
+    if (window.useTrickleIceWorkaround) {
+        setTimeout(() => {
+            tsk_utils_log_info("onSetLocalDescriptionSuccess");
+            var This = (tmedia_session_jsep01.mozThis || _This);
+            if (This && This.o_pc) {
+                if ((This.o_pc.iceGatheringState || This.o_pc.iceState) === "complete") {
+                    tmedia_session_jsep01.onIceGatheringCompleted(This);
+                }
+                This.b_sdp_ro_offer = false; // reset until next incoming RO
+            }
+        }, 1)
+    } else {
+        tsk_utils_log_info("onSetLocalDescriptionSuccess");
+        var This = (tmedia_session_jsep01.mozThis || _This);
+        if (This && This.o_pc) {
+            if ((This.o_pc.iceGatheringState || This.o_pc.iceState) === "complete") {
+                tmedia_session_jsep01.onIceGatheringCompleted(This);
+            }
+            This.b_sdp_ro_offer = false; // reset until next incoming RO
         }
-        This.b_sdp_ro_offer = false; // reset until next incoming RO
     }
 }
 
