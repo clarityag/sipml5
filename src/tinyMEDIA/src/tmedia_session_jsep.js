@@ -510,7 +510,7 @@ tmedia_session_jsep01.onCreateSdpError = function (s_error, _This) {
 
 tmedia_session_jsep01.onSetLocalDescriptionSuccess = function (_This) {
     if (window.useTrickleIceWorkaround) {
-        setTimeout(() => {
+        setTimeout(function() {
             tsk_utils_log_info("onSetLocalDescriptionSuccess");
             var This = (tmedia_session_jsep01.mozThis || _This);
             if (This && This.o_pc) {
