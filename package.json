@@ -1,0 +1,27 @@
+{
+  "name": "sipml5-clarity",
+  "version": "1.0.0",
+  "description": "Pathched sipml5 lib for Clarity Web Client",
+  "main": "release/SIPml-api.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clarityag/sipml5.git"
+  },
+  "keywords": [
+    "sipml",
+    "Clarity"
+  ],
+  "author": "Andrii Rushchak",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/clarityag/sipml5/issues"
+  },
+  "homepage": "https://github.com/clarityag/sipml5#readme"
+}
