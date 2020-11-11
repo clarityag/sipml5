@@ -6,8 +6,8 @@
  *  that can be found in the LICENSE file in the root of the source
  *  tree.
  */
-var RTCPeerConnection = null;
-var getUserMedia = null;
+// var RTCPeerConnection = null;
+// var getUserMedia = null;
 var attachMediaStream = null;
 var drawImage = null;
 var reattachMediaStream = null;
@@ -36,9 +36,11 @@ function maybeFixConfiguration(pcConfig) {
     }
   }
 }
+
 drawImage = function (context, video, x, y, width, height) {
     context.drawImage(video, x, y, width, height);
 }
+
 attachEventListener = function (video, type, listener, useCapture) {
     video.addEventListener(type, listener, useCapture);
 }
@@ -226,9 +228,11 @@ if (navigator.mozGetUserMedia) {
     to.src = from.src;
   };
 } else {
-    var console = console || {
-        "log": function(msg) {}
-    };
+    webrtcDetectedVersion = 'Unknown';
+    webrtcDetectedBrowser = 'Unknown';
+    // var console = console || {
+    //     "log": function(msg) {}
+    // };
     var createIceServer = function (url, username, password) {
         var url_parts = url.split(':');
         if (url_parts[0].indexOf('stun') === 0) {
@@ -242,242 +246,266 @@ if (navigator.mozGetUserMedia) {
         }
         return null;
     };
-    var extractPluginObj = function (elt) {
-        return elt.isWebRtcPlugin ? elt : elt.pluginObj;
-    }
-    var attachEventListener = function (elt, type, listener, useCapture) {
-        var _pluginObj = extractPluginObj(elt);
-        if (_pluginObj) {
-            _pluginObj.bindEventListener(type, listener, useCapture);
-        }
-        else {
-            if (typeof elt.addEventListener !== "undefined") {
-                elt.addEventListener(type, listener, useCapture);
-            }
-            else if (typeof elt.addEvent !== "undefined") {
-                elt.addEventListener("on" + type, listener, useCapture);
-            }
-        }
-    }
-    function getPlugin() {
-        return document.getElementById('WebrtcEverywherePluginId');
-    }
-    
-    var installPlugin = function () {
-        if (document.getElementById("WebrtcEverywherePluginId")) {
-            return;
-        }
-        console.log("installPlugin() called");
-        var isInternetExplorer = !!((Object.getOwnPropertyDescriptor && Object.getOwnPropertyDescriptor(window, "ActiveXObject")) || ("ActiveXObject" in window));
-        var isSafari = !!navigator.userAgent.indexOf('Safari');
-
-        var pluginObj = document.createElement('object');
-        if (isInternetExplorer) {
-            pluginObj.setAttribute('classid', 'CLSID:7FD49E23-C8D7-4C4F-93A1-F7EACFA1EC53');
-            isInternetExplorer = true;
-        } else {
-            pluginObj.setAttribute('type', 'application/webrtc-everywhere');
-        }
-        pluginObj.setAttribute('id', 'WebrtcEverywherePluginId');
-        document.body.appendChild(pluginObj);
-        pluginObj.setAttribute('width', '0');
-        pluginObj.setAttribute('height', '0');
-
-        if (pluginObj.isWebRtcPlugin || (typeof navigator.plugins !== "undefined" && (!!navigator.plugins["WebRTC Everywhere"] || navigator.plugins["WebRTC Everywhere Plug-in for Safari"]))) {
-            console.log("Plugin version: " + pluginObj.versionName + ", adapter version: 1.3.1");
-            if (isInternetExplorer) {
-                console.log("This appears to be Internet Explorer");
-                webrtcDetectedBrowser = "Internet Explorer";
-            }
-            else if (isSafari) {
-                console.log("This appears to be Safari");
-                webrtcDetectedBrowser = "Safari";
-            }
-            else; // any other NAPAPI-capable browser comes here
-        }
-        else {
-            console.log("Browser does not appear to be WebRTC-capable");
-        }
-    } // end-of-installPlugin()
-
-    if (document.body) {
-        installPlugin();
-    }
-    else {
-        attachEventListener(window, "load", function () {
-            console.log("onload");
-            installPlugin();
-        });
-        attachEventListener(document, "readystatechange", function () {
-            console.log("onreadystatechange:" + document.readyState);
-            if (document.readyState == "complete") {
-                installPlugin();
-            }
-        });
-    }
-
-    var getUserMediaDelayed;
-    getUserMedia = navigator.getUserMedia = function (constraints, successCallback, errorCallback) {
-        if (document.readyState !== "complete") {
-            console.log("readyState = " + document.readyState + ", delaying getUserMedia...");
-            if (!getUserMediaDelayed) {
-                getUserMediaDelayed = true;
-                attachEventListener(document, "readystatechange", function () {
-                    if (getUserMediaDelayed && document.readyState == "complete") {
-                        getUserMediaDelayed = false;
-                        getPlugin().getUserMedia(constraints, successCallback, errorCallback);
-                    }
-                });
-            }
-        }
-        else {
-            getPlugin().getUserMedia(constraints, successCallback, errorCallback);
-        }
-    }
 
     attachMediaStream = function(element, stream) {
-        console.log("Attaching media stream");
-        if (!element) {
-            return null;
-        }
-        if (element.isWebRtcPlugin) {
-            element.src = stream;
-            return element;
-        }
-        else if (element.nodeName.toLowerCase() === 'video') {
-            if (!element.pluginObj && stream) {
-                var _pluginObj = document.createElement('object');
-                var _isIE = (Object.getOwnPropertyDescriptor && Object.getOwnPropertyDescriptor(window, "ActiveXObject")) || ("ActiveXObject" in window);
-                if (_isIE) {
-                    // windowless
-                    var windowlessParam = document.createElement("param");
-                    windowlessParam.setAttribute('name', 'windowless');
-                    windowlessParam.setAttribute('value', true);
-                    _pluginObj.appendChild(windowlessParam);
-                    _pluginObj.setAttribute('classid', 'CLSID:7FD49E23-C8D7-4C4F-93A1-F7EACFA1EC53');
-                } else {
-                    _pluginObj.setAttribute('type', 'application/webrtc-everywhere');
-                }
-                element.pluginObj = _pluginObj;
-
-                _pluginObj.setAttribute('className', element.className);
-                _pluginObj.setAttribute('innerHTML', element.innerHTML);
-                var width = element.getAttribute("width");
-                var height = element.getAttribute("height");
-                var bounds = element.getBoundingClientRect();
-                if (!width) width = bounds.right - bounds.left;
-                if (!height) height = bounds.bottom - bounds.top;
-
-                if ("getComputedStyle" in window) {
-                    var computedStyle = window.getComputedStyle(element, null);
-                    if (!width && computedStyle.width != 'auto' && computedStyle.width != '0px') {
-                        width = computedStyle.width;
-                    }
-                    if (!height && computedStyle.height != 'auto' && computedStyle.height != '0px') {
-                        height = computedStyle.height;
-                    }
-                }
-                if (width) _pluginObj.setAttribute('width', width);
-                else _pluginObj.setAttribute('autowidth', true);
-                if (height) _pluginObj.setAttribute('height', height);
-                else _pluginObj.setAttribute('autoheight', true);
-
-                document.body.appendChild(_pluginObj);
-                if (element.parentNode) {
-                    element.parentNode.replaceChild(_pluginObj, element); // replace (and remove) element
-                    // add element again to be sure any query() will succeed
-                    document.body.appendChild(element);
-                    element.style.visibility = "hidden";
-                }
-            }
-
-            if (element.pluginObj) {
-                element.pluginObj.bindEventListener('play', function(objvid) {
-                    if (element.pluginObj) {
-                        if (element.pluginObj.getAttribute("autowidth") && objvid.videoWidth) {
-                            element.pluginObj.setAttribute('width', objvid.videoWidth/* + "px"*/);
-                        }
-                        if (element.pluginObj.getAttribute("autoheight") && objvid.videoHeight) {
-                            element.pluginObj.setAttribute('height', objvid.videoHeight/* + "px"*/);
-                        }
-                    }
-                });
-                element.pluginObj.src = stream;
-            }
-
-            return element.pluginObj;
-        }
-        else if (element.nodeName.toLowerCase() === 'audio') {
-            return element;
-        }
+      if (typeof element.srcObject !== 'undefined') {
+        element.srcObject = stream;
+      } else if (typeof element.mozSrcObject !== 'undefined') {
+        element.mozSrcObject = stream;
+      } else if (typeof element.src !== 'undefined') {
+          if (stream) {
+              element.src = URL.createObjectURL(stream);
+          }
+          else if (element.src && typeof URL.revokeObjectURL !== 'undefined') {
+              // createObjectURL(null) -> Failed to execute 'createObjectURL' on 'URL': No function was found that matched the signature provided.
+              URL.revokeObjectURL(element.src);
+              element.src = null;
+          }
+      } else {
+        console.log('Error attaching stream to element.');
+      }
+      return element;
     };
+  
+    reattachMediaStream = function(to, from) {
+      to.src = from.src;
+    };
+    // var extractPluginObj = function (elt) {
+    //     return elt.isWebRtcPlugin ? elt : elt.pluginObj;
+    // }
+    // var attachEventListener = function (elt, type, listener, useCapture) {
+    //     var _pluginObj = extractPluginObj(elt);
+    //     if (_pluginObj) {
+    //         _pluginObj.bindEventListener(type, listener, useCapture);
+    //     }
+    //     else {
+    //         if (typeof elt.addEventListener !== "undefined") {
+    //             elt.addEventListener(type, listener, useCapture);
+    //         }
+    //         else if (typeof elt.addEvent !== "undefined") {
+    //             elt.addEventListener("on" + type, listener, useCapture);
+    //         }
+    //     }
+    // }
+    // function getPlugin() {
+    //     return document.getElementById('WebrtcEverywherePluginId');
+    // }
+    
+    // var installPlugin = function () {
+    //     if (document.getElementById("WebrtcEverywherePluginId")) {
+    //         return;
+    //     }
+    //     console.log("installPlugin() called");
+    //     var isInternetExplorer = !!((Object.getOwnPropertyDescriptor && Object.getOwnPropertyDescriptor(window, "ActiveXObject")) || ("ActiveXObject" in window));
+    //     var isSafari = !!navigator.userAgent.indexOf('Safari');
 
-    //TODO: not implemented yet beacuse "src" property is readonly
-    //reattachMediaStream = function(to, from) {
-    //    var pluginObjTo = extractPluginObj(to);
-    //    var pluginObjFrom = extractPluginObj(from);
-    //    if (pluginObjTo && pluginObjFrom) {
-    //        pluginObjTo.src = pluginObjFrom.src;
-    //    }
-    //  };
+    //     var pluginObj = document.createElement('object');
+    //     if (isInternetExplorer) {
+    //         pluginObj.setAttribute('classid', 'CLSID:7FD49E23-C8D7-4C4F-93A1-F7EACFA1EC53');
+    //         isInternetExplorer = true;
+    //     } else {
+    //         pluginObj.setAttribute('type', 'application/webrtc-everywhere');
+    //     }
+    //     pluginObj.setAttribute('id', 'WebrtcEverywherePluginId');
+    //     document.body.appendChild(pluginObj);
+    //     pluginObj.setAttribute('width', '0');
+    //     pluginObj.setAttribute('height', '0');
 
-    drawImage = function (context, video, x, y, width, height) {
-        var pluginObj = extractPluginObj(video);
-        if (pluginObj && pluginObj.isWebRtcPlugin && pluginObj.videoWidth > 0 && pluginObj.videoHeight > 0) {
-            if (typeof pluginObj.getScreenShot !== "undefined") {
-                var bmpBase64 = pluginObj.getScreenShot();
-                if (bmpBase64) {
-                    var image = new Image();
-                    image.onload = function () {
-                        context.drawImage(image, 0, 0, width, height);
-                    };
-                    image.src = "data:image/png;base64," + bmpBase64;
-                }
-            }
-            else {
-                var imageData = context.createImageData(pluginObj.videoWidth, pluginObj.videoHeight);
-                if (imageData) {
-                    pluginObj.fillImageData(imageData);
-                    context.putImageData(imageData, x, y/*, width, height*/);
-                }
-            }
-        }
-    }
+    //     if (pluginObj.isWebRtcPlugin || (typeof navigator.plugins !== "undefined" && (!!navigator.plugins["WebRTC Everywhere"] || navigator.plugins["WebRTC Everywhere Plug-in for Safari"]))) {
+    //         console.log("Plugin version: " + pluginObj.versionName + ", adapter version: 1.3.1");
+    //         if (isInternetExplorer) {
+    //             console.log("This appears to be Internet Explorer");
+    //             webrtcDetectedBrowser = "Internet Explorer";
+    //         }
+    //         else if (isSafari) {
+    //             console.log("This appears to be Safari");
+    //             webrtcDetectedBrowser = "Safari";
+    //         }
+    //         else; // any other NAPAPI-capable browser comes here
+    //     }
+    //     else {
+    //         console.log("Browser does not appear to be WebRTC-capable");
+    //     }
+    // } // end-of-installPlugin()
 
-    // http://www.w3.org/TR/mediacapture-streams/#idl-def-MediaStreamTrack
-    MediaStreamTrack = {};
-    var getSourcesDelayed;
-    MediaStreamTrack.getSources = function (gotSources) { // not part of the standard (at least, haven't found it)
-        if (document.readyState !== "complete") {
-            console.log("readyState = " + document.readyState + ", delaying getSources...");
-            if (!getSourcesDelayed) {
-                getSourcesDelayed = true;
-                attachEventListener(document, "readystatechange", function () {
-                    if (getSourcesDelayed && document.readyState == "complete") {
-                        getSourcesDelayed = false;
-                        getPlugin().getSources(gotSources);
-                    }
-                });
-            }
-        }
-        else {
-            getPlugin().getSources(gotSources);
-        }
-    }
+    // if (document.body) {
+    //     installPlugin();
+    // }
+    // else {
+    //     attachEventListener(window, "load", function () {
+    //         console.log("onload");
+    //         installPlugin();
+    //     });
+    //     attachEventListener(document, "readystatechange", function () {
+    //         console.log("onreadystatechange:" + document.readyState);
+    //         if (document.readyState == "complete") {
+    //             installPlugin();
+    //         }
+    //     });
+    // }
 
-    // http://www.w3.org/TR/webrtc/#interface-definition
-    // http://www.w3.org/TR/webrtc/#rtcpeerconnection-interface-extensions-2
-    RTCPeerConnection = function (configuration, constraints) {
-        return getPlugin().createPeerConnection(configuration, constraints);
-    }
+    // var getUserMediaDelayed;
+    // getUserMedia = navigator.getUserMedia = function (constraints, successCallback, errorCallback) {
+    //     if (document.readyState !== "complete") {
+    //         console.log("readyState = " + document.readyState + ", delaying getUserMedia...");
+    //         if (!getUserMediaDelayed) {
+    //             getUserMediaDelayed = true;
+    //             attachEventListener(document, "readystatechange", function () {
+    //                 if (getUserMediaDelayed && document.readyState == "complete") {
+    //                     getUserMediaDelayed = false;
+    //                     getPlugin().getUserMedia(constraints, successCallback, errorCallback);
+    //                 }
+    //             });
+    //         }
+    //     }
+    //     else {
+    //         getPlugin().getUserMedia(constraints, successCallback, errorCallback);
+    //     }
+    // }
 
-    // http://www.w3.org/TR/webrtc/#rtcicecandidate-type
-    RTCIceCandidate = function (RTCIceCandidateInit) {
-        return getPlugin().createIceCandidate(RTCIceCandidateInit);
-    }
+    // attachMediaStream = function(element, stream) {
+    //     console.log("Attaching media stream");
+    //     if (!element) {
+    //         return null;
+    //     }
+    //     if (element.isWebRtcPlugin) {
+    //         element.src = stream;
+    //         return element;
+    //     }
+    //     else if (element.nodeName.toLowerCase() === 'video') {
+    //         if (!element.pluginObj && stream) {
+    //             var _pluginObj = document.createElement('object');
+    //             var _isIE = (Object.getOwnPropertyDescriptor && Object.getOwnPropertyDescriptor(window, "ActiveXObject")) || ("ActiveXObject" in window);
+    //             if (_isIE) {
+    //                 // windowless
+    //                 var windowlessParam = document.createElement("param");
+    //                 windowlessParam.setAttribute('name', 'windowless');
+    //                 windowlessParam.setAttribute('value', true);
+    //                 _pluginObj.appendChild(windowlessParam);
+    //                 _pluginObj.setAttribute('classid', 'CLSID:7FD49E23-C8D7-4C4F-93A1-F7EACFA1EC53');
+    //             } else {
+    //                 _pluginObj.setAttribute('type', 'application/webrtc-everywhere');
+    //             }
+    //             element.pluginObj = _pluginObj;
 
-    // http://www.w3.org/TR/webrtc/#session-description-model
-    RTCSessionDescription = function (RTCSessionDescriptionInit) {
-        return getPlugin().createSessionDescription(RTCSessionDescriptionInit);
-    }
+    //             _pluginObj.setAttribute('className', element.className);
+    //             _pluginObj.setAttribute('innerHTML', element.innerHTML);
+    //             var width = element.getAttribute("width");
+    //             var height = element.getAttribute("height");
+    //             var bounds = element.getBoundingClientRect();
+    //             if (!width) width = bounds.right - bounds.left;
+    //             if (!height) height = bounds.bottom - bounds.top;
+
+    //             if ("getComputedStyle" in window) {
+    //                 var computedStyle = window.getComputedStyle(element, null);
+    //                 if (!width && computedStyle.width != 'auto' && computedStyle.width != '0px') {
+    //                     width = computedStyle.width;
+    //                 }
+    //                 if (!height && computedStyle.height != 'auto' && computedStyle.height != '0px') {
+    //                     height = computedStyle.height;
+    //                 }
+    //             }
+    //             if (width) _pluginObj.setAttribute('width', width);
+    //             else _pluginObj.setAttribute('autowidth', true);
+    //             if (height) _pluginObj.setAttribute('height', height);
+    //             else _pluginObj.setAttribute('autoheight', true);
+
+    //             document.body.appendChild(_pluginObj);
+    //             if (element.parentNode) {
+    //                 element.parentNode.replaceChild(_pluginObj, element); // replace (and remove) element
+    //                 // add element again to be sure any query() will succeed
+    //                 document.body.appendChild(element);
+    //                 element.style.visibility = "hidden";
+    //             }
+    //         }
+
+    //         if (element.pluginObj) {
+    //             element.pluginObj.bindEventListener('play', function(objvid) {
+    //                 if (element.pluginObj) {
+    //                     if (element.pluginObj.getAttribute("autowidth") && objvid.videoWidth) {
+    //                         element.pluginObj.setAttribute('width', objvid.videoWidth/* + "px"*/);
+    //                     }
+    //                     if (element.pluginObj.getAttribute("autoheight") && objvid.videoHeight) {
+    //                         element.pluginObj.setAttribute('height', objvid.videoHeight/* + "px"*/);
+    //                     }
+    //                 }
+    //             });
+    //             element.pluginObj.src = stream;
+    //         }
+
+    //         return element.pluginObj;
+    //     }
+    //     else if (element.nodeName.toLowerCase() === 'audio') {
+    //         return element;
+    //     }
+    // };
+
+    // //TODO: not implemented yet beacuse "src" property is readonly
+    // //reattachMediaStream = function(to, from) {
+    // //    var pluginObjTo = extractPluginObj(to);
+    // //    var pluginObjFrom = extractPluginObj(from);
+    // //    if (pluginObjTo && pluginObjFrom) {
+    // //        pluginObjTo.src = pluginObjFrom.src;
+    // //    }
+    // //  };
+
+    // drawImage = function (context, video, x, y, width, height) {
+    //     var pluginObj = extractPluginObj(video);
+    //     if (pluginObj && pluginObj.isWebRtcPlugin && pluginObj.videoWidth > 0 && pluginObj.videoHeight > 0) {
+    //         if (typeof pluginObj.getScreenShot !== "undefined") {
+    //             var bmpBase64 = pluginObj.getScreenShot();
+    //             if (bmpBase64) {
+    //                 var image = new Image();
+    //                 image.onload = function () {
+    //                     context.drawImage(image, 0, 0, width, height);
+    //                 };
+    //                 image.src = "data:image/png;base64," + bmpBase64;
+    //             }
+    //         }
+    //         else {
+    //             var imageData = context.createImageData(pluginObj.videoWidth, pluginObj.videoHeight);
+    //             if (imageData) {
+    //                 pluginObj.fillImageData(imageData);
+    //                 context.putImageData(imageData, x, y/*, width, height*/);
+    //             }
+    //         }
+    //     }
+    // }
+
+    // // http://www.w3.org/TR/mediacapture-streams/#idl-def-MediaStreamTrack
+    // MediaStreamTrack = {};
+    // var getSourcesDelayed;
+    // MediaStreamTrack.getSources = function (gotSources) { // not part of the standard (at least, haven't found it)
+    //     if (document.readyState !== "complete") {
+    //         console.log("readyState = " + document.readyState + ", delaying getSources...");
+    //         if (!getSourcesDelayed) {
+    //             getSourcesDelayed = true;
+    //             attachEventListener(document, "readystatechange", function () {
+    //                 if (getSourcesDelayed && document.readyState == "complete") {
+    //                     getSourcesDelayed = false;
+    //                     getPlugin().getSources(gotSources);
+    //                 }
+    //             });
+    //         }
+    //     }
+    //     else {
+    //         getPlugin().getSources(gotSources);
+    //     }
+    // }
+
+    // // http://www.w3.org/TR/webrtc/#interface-definition
+    // // http://www.w3.org/TR/webrtc/#rtcpeerconnection-interface-extensions-2
+    // RTCPeerConnection = function (configuration, constraints) {
+    //     return getPlugin().createPeerConnection(configuration, constraints);
+    // }
+
+    // // http://www.w3.org/TR/webrtc/#rtcicecandidate-type
+    // RTCIceCandidate = function (RTCIceCandidateInit) {
+    //     return getPlugin().createIceCandidate(RTCIceCandidateInit);
+    // }
+
+    // // http://www.w3.org/TR/webrtc/#session-description-model
+    // RTCSessionDescription = function (RTCSessionDescriptionInit) {
+    //     return getPlugin().createSessionDescription(RTCSessionDescriptionInit);
+    // }
 }
