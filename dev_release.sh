@@ -36,7 +36,7 @@ AppendScripts()
 {
 	echo "var __b_release_mode = true;" > $1
 	
-	#AppendFile src/adapter.js $1
+	AppendFile src/adapter.js $1
 	AppendFile src/tinySAK/src/tsk_base64.js $1
     AppendFile src/tinySAK/src/tsk_buff.js $1
     AppendFile src/tinySAK/src/tsk_fsm.js $1
